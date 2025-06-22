@@ -7,8 +7,7 @@
         }
         
         .home-container {
-            margin-top: 90px;
-            margin-bottom: 70px;
+            margin-top: 50px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -166,48 +165,6 @@
             color: #cc0000;
             font-weight: bold;
         }
-        .action-buttons {
-            display: flex; /* Keep flex to maintain original behavior */
-            flex-wrap: wrap; /* Allow wrapping to multiple lines */
-            justify-content: center;
-            gap: 10px;
-            margin-top: 30px;
-            width: 100%;
-            max-width: 1000px;
-        }
-        .action-buttons button {
-            flex: 1 1 calc(33.333% - 20px); /* Each button takes ~1/3 of width minus gap */
-            min-width: 120px; /* Reduced minimum width */
-            max-width: 250px; /* Reduced maximum width */
-            padding: 10px 20px; /* Keep original padding */
-            font-size: 14px; /* Keep original */
-            background-color: #8B0000;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            white-space: nowrap;
-            text-align: center;
-        
-            /* Ensures equal height regardless of content */
-            height: 45px; /* Matches original calculated height */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .action-buttons button:hover {
-            background-color: #cc0000;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        }
-
-        /* Hide scrollbar for action buttons */
-        .action-buttons::-webkit-scrollbar {
-            display: none;
-        }
     </style>
     <?php
     if (!isset($_SESSION['user_id'])) {
@@ -235,7 +192,7 @@
                     <p>50</p>
                     <h5>Status</h5>
                     <p class="text-danger">Incomplete Data</p>
-                    <a href="#">View Class</a>
+                    <a href="index.php?page=">View Class</a>
                 </div>
                 <div class="card">
                     <h5>Course & Program</h5>
@@ -268,17 +225,6 @@
 
             <button id="nextBtn" class="nav-btn">&gt;</button>
         </div>
-
-        <div class="action-buttons">
-            <button>Update Student List</button>
-            <button>Record Attendance</button>
-            <button>Score Participation</button>
-            <button>Encode Grades</button>
-            <button>View Historical Records</button>
-            <button>Generate Report</button>
-        </div>
-    </div>
-
     <script>
         const cards = document.querySelectorAll('.card');
         const prevBtn = document.getElementById('prevBtn');

@@ -4,44 +4,54 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Include connection first
-require_once __DIR__ . '/../db/connection.php'; // Use absolute path
-// Then include functions
+require_once __DIR__ . '/../db/connection.php';
 require_once __DIR__ . '/../functions.php';
 
-// Pagination setup
-$limit = 10; // Number of students per page
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1; // Get current page
-$page = max(1, $page); // Ensure page is at least 1
-$offset = ($page - 1) * $limit; // Calculate offset
-
-// Get selected filter and value from the request
+// Get filters
 $selectedCourse = $_GET['course'] ?? '';
 $selectedProgram = $_GET['program'] ?? '';
 
-// Get all courses and programs
+// Get data
 $courses = getCourses($conn);
 $programs = getPrograms($conn);
-
-// Get total count of students (without pagination)
-$totalStudents = countStudents($conn, $selectedCourse, $selectedProgram);
-$totalPages = ceil($totalStudents / $limit); // Calculate total pages
-
-// Get students for current page (with pagination)
-$students = filterStudents($conn, $selectedCourse, $selectedProgram, $limit, $offset);
+$students = filterStudents($conn, $selectedCourse, $selectedProgram);
 ?>
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container py-6">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Student List</h2>
-        <?= renderFilterForm($selectedCourse, $selectedProgram, $courses, $programs); ?>
-        <div style="margin: 0px 10px 0px;">
-            <button type="button" class="btn update-content-btn">
-                <a style="text-decoration: none; color: white;" href="index.php?page=attendance-edit">Update Content</a>
-            </button>
+        <div class="display-flex">
+            <form method="GET" class="mb-3" id="filterForm" onsubmit="return handleFilterSubmit(event);">
+                <div class="d-flex align-items-center">
+                    <select style="width: 150%" name="course" class="form-select" id="courseSelect">
+                        <option value="">Select Course</option>
+                        <?php foreach ($courses as $course): ?>
+                            <option value="<?= htmlspecialchars($course) ?>" <?= $selectedCourse === $course ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($course) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <select style="width: 150%" name="program" class="form-select" id="programSelect">
+                        <option value="">Select Program</option>
+                        <?php foreach ($programs as $program): ?>
+                            <option value="<?= htmlspecialchars($program) ?>" <?= $selectedProgram === $program ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($program) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                </div>
+            </form>
+        </div>
+        <div class="d-flex align-items-center">
+            <div id="actionButtons" style="display: none; margin-right: 10px;">
+                <button type="button" class="btn btn-success" onclick="addStudent()">Add</button>
+                <button type="button" class="btn btn-warning" onclick="editStudent()">Edit</button>
+                <button type="button" class="btn btn-danger" onclick="deleteStudent()">Delete</button>
+            </div>
+            <button type="button" class="btn update-content-btn" id="updateButton" onclick="toggleActionButtons()">Update Content</button>
         </div>
     </div>
 
-    <!-- Student Table -->
     <div class="table-responsive">
         <table class="table table-bordered table-hover bg-white">
             <thead class="table-light">
@@ -55,17 +65,15 @@ $students = filterStudents($conn, $selectedCourse, $selectedProgram, $limit, $of
             </thead>
             <tbody>
                 <?php if ($students && $students->num_rows > 0): ?>
-                    <?php 
-                    $startingNumber = ($page - 1) * $limit + 1;
-                    $currentNumber = $startingNumber;
-                    
-                    while ($row = $students->fetch_assoc()): ?>
+                    <?php $currentNumber = 1; while ($row = $students->fetch_assoc()): ?>
                         <tr>
                             <td style="text-align:center" class="p-1"><?= $currentNumber++ ?></td>
                             <td class="p-1"><?= htmlspecialchars($row['Student_Name']) ?></td>
                             <td style="text-align: center" class="p-1"><?= htmlspecialchars($row['Course_Name']) ?></td>
                             <td style="text-align: center" class="p-1"><?= htmlspecialchars($row['Program_Year']) ?></td>
-                            <td style="text-align:center" class="p-1"><a href="#" class="btn btn-sm btn-outline-primary">View Details</a></td>
+                            <td style="text-align:center" class="p-1">
+                                <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
+                            </td>
                         </tr>
                     <?php endwhile; ?>
                 <?php else: ?>
@@ -74,66 +82,82 @@ $students = filterStudents($conn, $selectedCourse, $selectedProgram, $limit, $of
             </tbody>
         </table>
     </div>
-
-    <!-- Pagination -->
-    <?php if ($totalPages > 1): ?>
-        <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-                <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
-                    <a class="page-link" href="?page=<?= $page - 1 ?>&course=<?= urlencode($selectedCourse) ?>&program=<?= urlencode($selectedProgram) ?>" tabindex="-1">Previous</a>
-                </li>
-                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                    <li class="page-item <?= $page == $i ? 'active' : '' ?>">
-                        <a class="page-link" href="?page=<?= $i ?>&course=<?= urlencode($selectedCourse) ?>&program=<?= urlencode($selectedProgram) ?>"><?= $i ?></a>
-                    </li>
-                <?php endfor; ?>
-                <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
-                    <a class="page-link" href="?page=<?= $page + 1 ?>&course=<?= urlencode($selectedCourse) ?>&program=<?= urlencode($selectedProgram) ?>">Next</a>
-                </li>
-            </ul>
-        </nav>
-    <?php endif; ?>
 </div>
 
-<style>
-    .table th, .table td {
-        padding: 25px; /* Adjust padding to make rows thinner */
-        font-size: 17px; /* Optional: Adjust font size */
-    }
-    th {
-        text-align: center;
-        background-color: #8B0000;
-    }
-</style>
-
 <script>
-function updateValueDropdown() {
-    const filterBy = document.getElementById('filterBy');
-    const filterValue = document.getElementById('filterValue');
-    const selectedValue = filterValue.value; // Remember current selection
+function handleFilterSubmit(event) {
+    event.preventDefault();
+    const course = document.getElementById('courseSelect').value;
+    const program = document.getElementById('programSelect').value;
+    let url = 'http://localhost/SYSTEM/index.php?page=studentlist';
     
-    // Clear options but keep "All Values"
-    filterValue.innerHTML = '<option value="">All Values</option>';
+    if (course) url += '&course=' + encodeURIComponent(course);
+    if (program) url += '&program=' + encodeURIComponent(program);
     
-    if (filterBy.value === 'course') {
-        <?php foreach ($courses as $course): ?>
-            filterValue.innerHTML += '<option value="<?= htmlspecialchars($course) ?>"><?= htmlspecialchars($course) ?></option>';
-        <?php endforeach; ?>
-    } 
-    else if (filterBy.value === 'program') {
-        <?php foreach ($programs as $program): ?>
-            filterValue.innerHTML += '<option value="<?= htmlspecialchars($program) ?>"><?= htmlspecialchars($program) ?></option>';
-        <?php endforeach; ?>
-    }
-    
-    // Restore selection if possible
-    if (selectedValue && [].some.call(filterValue.options, opt => opt.value === selectedValue)) {
-        filterValue.value = selectedValue;
+    window.location.href = url;
+}
+
+function addStudent() {
+    const name = prompt("Enter Student Name:");
+    if (!name) return;
+
+    const course = prompt("Enter Course:");
+    if (!course) return;
+
+    const program = prompt("Enter Program:");
+    if (!program) return;
+
+    fetch('api/add_student.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ 
+            name: name,
+            course: course,
+            program: program 
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            throw new Error(data.message || 'Failed to add student');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+    });
+}
+
+function toggleActionButtons() {
+    const actionButtons = document.getElementById('actionButtons');
+    const updateButton = document.getElementById('updateButton');
+
+    if (actionButtons.style.display === 'none' || actionButtons.style.display === '') {
+        actionButtons.style.display = 'block';
+        updateButton.textContent = 'Save Changes';
+    } else {
+        actionButtons.style.display = 'none';
+        updateButton.textContent = 'Update Content';
     }
 }
 
-// Initialize the dropdown on page load
-document.addEventListener('DOMContentLoaded', function() {
-    updateValueDropdown();
-});
+// Placeholder functions for future implementation
+function editStudent() {
+    alert("Edit functionality will be implemented here");
+}
+
+function deleteStudent() {
+    alert("Delete functionality will be implemented here");
+}
 </script>
